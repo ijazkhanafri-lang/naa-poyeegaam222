@@ -799,7 +799,8 @@ function triggerNextWorkflow(nextDurationValue, attempt = 1) {
         '-f', `stream_quality=${selectedQuality}`,
         '-f', `proxy_engine=${PROXY_ENGINE}`,
         '-f', `enable_stream_audio=${process.env.ENABLE_STREAM_AUDIO || 'ON'}`,
-        '-f', `custom_duration=${nextDurationValue}`
+        '-f', `custom_duration=${nextDurationValue}`,
+        '-f', `end_at=${process.env.END_AT || ''}`
     ];
 
     let settled = false;
@@ -840,7 +841,16 @@ function triggerNextWorkflow(nextDurationValue, attempt = 1) {
     });
 }
 
-const totalRequestedMs = parseFlexibleDuration(RAW_DURATION);
+const END_AT = parseInt(process.env.END_AT || '', 10);
+let totalRequestedMs = parseFlexibleDuration(RAW_DURATION);
+if (!isNaN(END_AT) && END_AT > 0) {
+    totalRequestedMs = END_AT - Date.now();
+    if (totalRequestedMs <= 0) {
+        console.log('[🛑] End time already passed. Exiting.');
+        process.exit(0);
+    }
+    console.log(`[⏱️] Absolute END_AT set -> ${formatMsToDurationString(totalRequestedMs)} remaining`);
+}
 
 if (totalRequestedMs === null) {
     // MODE 1: 24/7 INFINITE STREAM
