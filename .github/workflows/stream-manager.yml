@@ -51,6 +51,23 @@ jobs:
 
           const LOOP_DURATION = 21000000; // 5 hours 50 minutes
           const CHECK_INTERVAL = 300000; // Exact 5 Minutes
+
+          function parseDurationMs(input) {
+            if (!input) return null;
+            const str = input.toLowerCase().trim();
+            if (['24/7', 'infinite', 'forever', '0', 'none', ''].includes(str)) return null;
+            let total = 0, matched = false, m;
+            const re = /(\d+(?:\.\d+)?)\s*(hours?|hrs?|h|minutes?|mins?|m|seconds?|secs?|s)/g;
+            while ((m = re.exec(str)) !== null) {
+              matched = true;
+              const v = parseFloat(m[1]), u = m[2];
+              if (u.startsWith('h')) total += v * 3600000;
+              else if (u.startsWith('m')) total += v * 60000;
+              else total += v * 1000;
+            }
+            if (!matched && /^\d+(\.\d+)?$/.test(str)) { total = parseFloat(str) * 60000; matched = true; }
+            return matched && total > 0 ? Math.round(total) : null;
+          }
           const startMs = Date.now();
           const currentRunId = process.env.GITHUB_RUN_ID;
           const stopTimeInput = (process.env.STOP_TIME || '3:00 AM').trim();
@@ -236,8 +253,7 @@ jobs:
                           const name = (r.name || '').trim();
                           // Exact match for "OK.ru Live - Channel X" so Channel 1 doesn't kill Channel 1.1
                           if (
-                            title === `OK.ru Live - Channel ${cleanChan}` ||
-                            title.endsWith(`Channel ${cleanChan}`) ||
+                            title.startsWith(`OK.ru Live - Ch ${cleanChan} [`) ||
                             title === chan ||
                             name === chan
                           ) {
@@ -302,7 +318,9 @@ jobs:
                       if (diffMinutesStream <= 20 && diffMinutesStream >= -5) {
                         const formattedUrls = url.replace(/\|/g, ',');
                         console.log(`\n[🚀] TRIGGER WINDOW HIT! Starting Channel ${channel}`);
-                        const cmd = `gh workflow run main.yml -f target_urls="${formattedUrls}" -f okru_stream_channel="${channel}" -f stream_quality="${quality}" -f server_selection="${server}" -f proxy_engine="${proxyEngine}" -f enable_stream_audio="${enableAudio}"`;
+                        const durMs = parseDurationMs(duration);
+                        const endAt = durMs ? (targetTime.getTime() + durMs) : '';
+                        const cmd = `gh workflow run main.yml -f target_urls="${formattedUrls}" -f okru_stream_channel="${channel}" -f stream_quality="${quality}" -f server_selection="${server}" -f proxy_engine="${proxyEngine}" -f enable_stream_audio="${enableAudio}" -f custom_duration="${duration}" -f end_at="${endAt}"`;
                         try {
                           execSync(cmd, { stdio: 'inherit' });
                           changesMade = true;
