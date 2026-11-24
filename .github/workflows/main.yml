@@ -54,6 +54,11 @@ on:
         required: false
         type: string
         default: '24/7'
+      end_at:
+        description: 'Absolute end time (epoch ms). Auto-filled by manager, leave empty otherwise'
+        required: false
+        type: string
+        default: ''
 
 permissions:
   contents: write
@@ -142,6 +147,7 @@ jobs:
           PROXY_ENGINE: ${{ github.event.inputs.proxy_engine }}
           ENABLE_STREAM_AUDIO: ${{ github.event.inputs.enable_stream_audio }}
           CUSTOM_DURATION: ${{ github.event.inputs.custom_duration }}
+          END_AT: ${{ github.event.inputs.end_at }}
         run: |
           pulseaudio -D --exit-idle-time=-1
           pacmd load-module module-virtual-sink sink_name=v1
